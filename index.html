@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ArtMintX — Admin (Private)</title>
+
+<!-- Tailwind for styling -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#e6eef3; --muted:#93a1ad; --card:#0b141a; --line:#16232b; --bg:#071018; --pri:#00c7d4; }
+  *{ box-sizing:border-box }
+  body{ font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+  .muted{ color:var(--muted) }
+  .btn{ background:var(--pri); color:#012; font-weight:800; padding:10px 14px; border-radius:12px; }
+  .btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--muted); padding:10px 14px; border-radius:12px; }
+  .nav a.active{ background:#0b2b32; color:#aee; }
+  .grid-cards{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px }
+  @media(max-width:1100px){ .layout{ grid-template-columns:1fr } .sidebar{ display:none } .grid-cards{ grid-template-columns:repeat(2,minmax(0,1fr)) } }
+  @media(max-width:720px){ .grid-cards{ grid-template-columns:1fr } }
+  .nft-card{ overflow:hidden; border-radius:14px; background:var(--card); border:1px solid var(--line); transition:transform .2s ease, box-shadow .2s ease }
+  .nft-card:hover{ transform:translateY(-2px); box-shadow:0 12px 26px rgba(0,0,0,.25) }
+  .nft-img{ width:100%; height:200px; object-fit:cover; display:block; background:#06131a }
+  .tag{ font-size:12px; padding:2px 8px; border-radius:100px; border:1px solid var(--line); color:var(--muted) }
+  .toast{ position:fixed; right:16px; bottom:16px; padding:10px 14px; border-radius:12px; z-index:9999 }
+  .mbackdrop{ position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:9998 }
+  .modal{ width:min(720px,95vw); }
+</style>
+</head>
+<body>
+
+<!-- ========== LOGIN ========== -->
+<div id="gate" class="min-h-screen flex items-center justify-center p-6">
+  <div class="card max-w-md w-full">
+    <div class="flex items-center gap-3 mb-4">
+      <div style="width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,#00c7d4,#6aa3ff)"></div>
+      <div>
+        <div class="font-extrabold text-lg">ArtMintX — Admin</div>
+        <div class="muted text-sm">Private console</div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="muted text-sm">Email</label>
+      <input id="email" class="w-full mt-1 p-3 rounded bg-[#071521] border border-[#16232b]" placeholder="admin email">
+    </div>
+    <div class="mb-4">
+      <label class="muted text-sm">Password</label>
+      <input id="password" type="password" class="w-full mt-1 p-3 rounded bg-[#071521] border border-[#16232b]" placeholder="password">
+    </div>
+
+    <div class="flex gap-3">
+      <button id="loginBtn" class="btn w-full">Sign in</button>
+      <button id="fillBtn" class="btn-ghost">Fill</button>
+    </div>
+    <p id="loginMsg" class="muted text-sm mt-3"></p>
+    <p class="muted text-xs mt-2">Admin: <b>blessing75099@gmail.com</b></p>
+  </div>
+</div>
+
+<!-- ========== APP ========== -->
+<div id="app" class="hidden">
+  <div class="grid layout" style="grid-template-columns:260px 1fr; min-height:100vh;">
+    <!-- SIDEBAR -->
+    <aside class="sidebar card p-4 m-4">
+      <div class="flex items-center gap-3 mb-4">
+        <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#00c7d4,#6aa3ff)"></div>
+        <div>
+          <div class="font-extrabold">ArtMintX Admin</div>
+          <div id="adminEmailView" class="muted text-xs">—</div>
+        </div>
+      </div>
+
+      <nav class="nav flex flex-col gap-2">
+        <a href="#" data-view="overview" class="muted p-2 rounded hover:bg-[#0b2b32] active">Overview</a>
+        <a href="#" data-view="purchases" class="muted p-2 rounded hover:bg-[#0b2b32]">Purchases</a>
+        <a href="#" data-view="users" class="muted p-2 rounded hover:bg-[#0b2b32]">Users</a>
+        <a href="#" data-view="transactions" class="muted p-2 rounded hover:bg-[#0b2b32]">Transactions</a>
+        <a href="#" data-view="settings" class="muted p-2 rounded hover:bg-[#0b2b32]">Settings</a>
+        <button id="logoutBtn" class="btn-ghost mt-4">Sign out</button>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="p-5">
+      <!-- Top -->
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-xl font-extrabold">Admin Dashboard</h1>
+          <div class="muted text-sm">Manage users, credits, NFTs & settings</div>
+        </div>
+        <div class="flex gap-2">
+          <button id="refreshBtn" class="btn-ghost">Refresh</button>
+        </div>
+      </div>
+
+      <!-- VIEWS -->
+      <!-- OVERVIEW -->
+      <section id="view-overview" data-section>
+        <div class="grid md:grid-cols-3 gap-4 mb-4">
+          <div class="card"><div class="muted text-sm">Total Users</div><div id="kUsers" class="font-extrabold text-lg">0</div></div>
+          <div class="card"><div class="muted text-sm">Total Credits Issued (USD)</div><div id="kCredits" class="font-extrabold text-lg">$0.00</div></div>
+          <div class="card"><div class="muted text-sm">Admin Purchases</div><div id="kPurchases" class="font-extrabold text-lg">0</div></div>
+        </div>
+
+        <div class="card mb-4">
+          <h3 class="font-bold mb-2">Recent Activity</h3>
+          <div class="overflow-auto max-h-[420px]">
+            <table class="w-full text-left">
+              <thead><tr>
+                <th class="p-2 muted text-sm">Time</th>
+                <th class="p-2 muted text-sm">Type</th>
+                <th class="p-2 muted text-sm">Email</th>
+                <th class="p-2 muted text-sm">Wallet</th>
+                <th class="p-2 muted text-sm">Amount</th>
+                <th class="p-2 muted text-sm">Note</th>
+              </tr></thead>
+              <tbody id="recentActivity"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PURCHASES -->
+      <section id="view-purchases" data-section class="hidden">
+        <div class="grid md:grid-cols-3 gap-4 mb-4">
+          <div class="card"><div class="muted text-sm">Total BTC Spent</div><div id="tBTC" class="font-extrabold text-lg">0 BTC</div></div>
+          <div class="card"><div class="muted text-sm">Total SOL Spent</div><div id="tSOL" class="font-extrabold text-lg">0 SOL</div></div>
+          <div class="card"><div class="muted text-sm">Total USD Spent</div><div id="tUSD" class="font-extrabold text-lg">$0</div></div>
+        </div>
+
+        <div id="purchasesGrid" class="grid-cards"></div>
+      </section>
+
+      <!-- USERS -->
+      <section id="view-users" data-section class="hidden">
+        <div class="card mb-4">
+          <div class="flex items-center gap-3">
+            <input id="searchUser" placeholder="Search by email..." class="w-full p-3 bg-[#071521] border border-[#16232b] rounded">
+            <button id="searchBtn" class="btn">Search</button>
+            <button id="clearSearch" class="btn-ghost">Clear</button>
+          </div>
+        </div>
+        <div id="usersContainer"></div>
+      </section>
+
+      <!-- TRANSACTIONS -->
+      <section id="view-transactions" data-section class="hidden">
+        <div class="card">
+          <h3 class="font-bold mb-2">Credits / Transactions (latest 200)</h3>
+          <div class="overflow-auto max-h-[460px]">
+            <table class="w-full text-left">
+              <thead><tr>
+                <th class="p-2 muted text-sm">#</th>
+                <th class="p-2 muted text-sm">Time</th>
+                <th class="p-2 muted text-sm">Email</th>
+                <th class="p-2 muted text-sm">Wallet</th>
+                <th class="p-2 muted text-sm">Amount</th>
+                <th class="p-2 muted text-sm">Demo</th>
+                <th class="p-2 muted text-sm">Note</th>
+              </tr></thead>
+              <tbody id="txTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="view-settings" data-section class="hidden">
+        <div class="card">
+          <h3 class="font-bold mb-3">Public Deposit Addresses</h3>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <label class="muted text-sm">BTC Address</label>
+              <input id="btcInput" class="w-full p-3 bg-[#071521] border border-[#16232b] rounded">
+            </div>
+            <div>
+              <label class="muted text-sm">SOL Address</label>
+              <input id="solInput" class="w-full p-3 bg-[#071521] border border-[#16232b] rounded">
+            </div>
+          </div>
+          <div class="mt-4 flex gap-3">
+            <button id="saveAddrs" class="btn">Save</button>
+            <button id="resetAddrs" class="btn-ghost">Reset defaults</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ========== SCRIPTS ========== -->
+<script type="module">
+  /* ---------------- Firebase (modular v10) ---------------- */
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import {
+    getFirestore, collection, query, where, orderBy, getDocs, addDoc, serverTimestamp,
+    doc, setDoc, getDoc, updateDoc, limit, increment
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // Your project config (from earlier)
+  const firebaseConfig = {
+    apiKey: "AIzaSyDX5l-iBZLWspb6bOlQSMvm7PnP2MYBs5o",
+    authDomain: "artmintx.firebaseapp.com",
+    projectId: "artmintx",
+    storageBucket: "artmintx.firebasestorage.app",
+    messagingSenderId: "209020671049",
+    appId: "1:209020671049:web:df8f1f8b986a747ba1db98"
+  };
+  const ADMIN_EMAIL = "blessing75099@gmail.com";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  /* ---------------- Helpers ---------------- */
+  const $  = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+  const show = id => { $$('[data-section]').forEach(s=>s.classList.add('hidden')); $(`#view-${id}`).classList.remove('hidden'); document.querySelectorAll('.nav a').forEach(a=>a.classList.remove('active')); document.querySelector(`.nav a[data-view="${id}"]`).classList.add('active'); };
+  const toast = (m, bad=false) => { const t=document.createElement('div'); t.className='toast'; t.style.background=bad?'rgba(239,68,68,.95)':'rgba(0,199,212,.95)'; t.style.color=bad?'#fff':'#012'; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),2600); };
+
+  /* ---------------- Login ---------------- */
+  $('#fillBtn').onclick = ()=>{ $('#email').value=ADMIN_EMAIL; $('#password').value='fla098765#'; };
+  $('#loginBtn').onclick = async ()=>{
+    const email=$('#email').value.trim(), pass=$('#password').value;
+    if(!email||!pass){ $('#loginMsg').textContent='Enter email & password'; return; }
+    try{ await signInWithEmailAndPassword(auth,email,pass); $('#loginMsg').textContent=''; }
+    catch(e){ $('#loginMsg').textContent=e.message; }
+  };
+
+  onAuthStateChanged(auth, (user)=>{
+    if(!user){ $('#gate').style.display=''; $('#app').classList.add('hidden'); return; }
+    if(user.email.toLowerCase()!==ADMIN_EMAIL.toLowerCase()){ toast('Access denied',true); signOut(auth); return; }
+    $('#gate').style.display='none'; $('#app').classList.remove('hidden'); $('#adminEmailView').textContent=user.email;
+    show('overview'); boot();
+  });
+
+  $('#logoutBtn').onclick = async ()=>{ await signOut(auth); location.reload(); };
+  $('#refreshBtn').onclick = ()=> boot();
+  document.querySelectorAll('.nav a').forEach(a=> a.onclick=(e)=>{ e.preventDefault(); show(a.dataset.view); });
+
+  /* ---------------- Boot ---------------- */
+  async function boot(){
+    await loadSettings();
+    await renderOverview();
+    await loadRecentActivity();
+    await loadCreditsTable();
+    await loadPurchases(true);
+    await loadUsers();
+    bindSearch();
+  }
+
+  /* ---------------- Settings ---------------- */
+  async function loadSettings(){
+    try{
+      const snap = await getDoc(doc(db,'settings','public'));
+      const data = snap.exists()? snap.data(): {};
+      $('#btcInput').value = data.btc || 'bc1qq6tzrya3sn5m3nee6f6vzfa59wprvplkj45ulk';
+      $('#solInput').value = data.sol || 'G2GYyxj4bjzdrxX4BUrgFFiB63e9QvcqbzPMuruRdBu1';
+    }catch(e){ console.warn(e); }
+  }
+  $('#saveAddrs').onclick = async ()=>{
+    await setDoc(doc(db,'settings','public'), { btc:$('#btcInput').value.trim(), sol:$('#solInput').value.trim() }, { merge:true });
+    toast('Addresses saved');
+  };
+  $('#resetAddrs').onclick = ()=>{ $('#btcInput').value='bc1qq6tzrya3sn5m3nee6f6vzfa59wprvplkj45ulk'; $('#solInput').value='G2GYyxj4bjzdrxX4BUrgx…RdBu1'.replace('x','F'); };
+
+  /* ---------------- Users ---------------- */
+  async function loadUsers(qText=''){
+    const el = $('#usersContainer'); el.innerHTML='<div class="muted p-3">Loading users…</div>';
+    try{
+      const snap = await getDocs(collection(db,'users'));
+      const rows = []; snap.forEach(s=> rows.push({ id:s.id, ...s.data() }));
+      const filtered = qText? rows.filter(r=>(r.email||'').toLowerCase().includes(qText.toLowerCase())) : rows;
+      renderUsersList(filtered.sort((a,b)=> (a.email||'').localeCompare(b.email||'')));
+    }catch(e){ console.error(e); el.innerHTML='<div class="muted p-3">Error loading users</div>'; }
+  }
+  function renderUsersList(rows){
+    const el = $('#usersContainer'); el.innerHTML='';
+    if(rows.length===0){ el.innerHTML='<div class="muted p-3">No users found</div>'; return; }
+    rows.forEach(r=>{
+      const div=document.createElement('div'); div.className='card mb-3';
+      div.innerHTML=`
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="font-bold">${r.email||r.id}</div>
+            <div class="muted text-sm">BTC: $${Number(r.btcUsd||0).toFixed(2)} • SOL: $${Number(r.solUsd||0).toFixed(2)}</div>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn-ghost" data-uid="${r.id}" data-act="inspect">Inspect</button>
+            <button class="btn" data-uid="${r.id}" data-act="credit">Fund Wallet</button>
+          </div>
+        </div>`;
+      el.appendChild(div);
+    });
+    el.querySelectorAll('[data-act="inspect"]').forEach(b=> b.onclick=async ()=> {
+      const uid=b.dataset.uid; const s=await getDoc(doc(db,'users',uid));
+      alert(JSON.stringify(s.exists()? s.data(): {id:uid}, null, 2));
+    });
+    el.querySelectorAll('[data-act="credit"]').forEach(b=> b.onclick=()=> openCreditModal(b.dataset.uid));
+  }
+  function bindSearch(){ $('#searchBtn').onclick=()=> loadUsers($('#searchUser').value.trim()); $('#clearSearch').onclick=()=>{ $('#searchUser').value=''; loadUsers(); } }
+
+  /* ---------------- Fund Wallet Modal ---------------- */
+  function openCreditModal(uid){
+    (async ()=>{
+      const s=await getDoc(doc(db,'users',uid)); const email=s.exists()? (s.data().email||uid) : uid;
+      const wrap=document.createElement('div'); wrap.className='mbackdrop';
+      wrap.innerHTML=`
+        <div class="card modal">
+          <h3 class="font-bold mb-2">Fund Wallet — ${email}</h3>
+          <div class="grid md:grid-cols-2 gap-3">
+            <div><label class="muted text-sm">Wallet</label>
+              <select id="mWallet" class="w-full p-3 bg-[#071521] border border-[#16232b] rounded">
+                <option value="BTC">BTC</option><option value="SOL">SOL</option>
+              </select>
+            </div>
+            <div><label class="muted text-sm">Amount (USD)</label>
+              <input id="mAmount" type="number" step="0.01" class="w-full p-3 bg-[#071521] border border-[#16232b] rounded" placeholder="e.g. 50">
+            </div>
+          </div>
+          <div class="mt-3"><label class="muted text-sm">Note</label>
+            <input id="mNote" class="w-full p-3 bg-[#071521] border border-[#16232b] rounded" placeholder="optional">
+          </div>
+          <div class="mt-4 flex justify-end gap-2">
+            <button id="mCancel" class="btn-ghost">Cancel</button>
+            <button id="mConfirm" class="btn">Credit</button>
+          </div>
+        </div>`;
+      document.body.appendChild(wrap);
+      wrap.querySelector('#mCancel').onclick=()=> wrap.remove();
+      wrap.querySelector('#mConfirm').onclick=async ()=>{
+        const wallet=wrap.querySelector('#mWallet').value;
+        const amount=Number(wrap.querySelector('#mAmount').value||0);
+        const note=wrap.querySelector('#mNote').value.trim();
+        if(!(amount>0)){ alert('Enter a valid amount'); return; }
+        if(!confirm(`Credit ${email}: ${wallet} $${amount.toFixed(2)} ?`)) return;
+        try{
+          await addDoc(collection(db,'credits'), { uid, email:email.toLowerCase(), wallet, amountUsd:amount, isDemo:true, note, createdAt:serverTimestamp() });
+          const uRef=doc(db,'users',uid);
+          await updateDoc(uRef, wallet==='BTC'? { btcUsd:increment(amount) } : { solUsd:increment(amount) });
+          await addDoc(collection(db,'transactions'), { type:'CREDIT', uid, email:email.toLowerCase(), wallet, amountUsd:amount, note, createdAt:serverTimestamp() });
+          toast('Wallet credited'); wrap.remove(); loadUsers(); loadRecentActivity(); loadCreditsTable();
+        }catch(e){ console.error(e); alert('Credit failed: '+(e.message||e)); }
+      };
+    })();
+  }
+
+  /* ---------------- Recent Activity + Transactions ---------------- */
+  async function loadRecentActivity(){
+    const out=$('#recentActivity'); out.innerHTML='<tr><td colspan="6" class="p-3 muted">Loading…</td></tr>';
+    try{
+      const qy=query(collection(db,'credits'), orderBy('createdAt','desc'), limit(12));
+      const snap=await getDocs(qy); out.innerHTML='';
+      snap.forEach(d=>{
+        const x=d.data();
+        const tr=document.createElement('tr');
+        tr.innerHTML=`
+          <td class="p-2 text-sm">${x.createdAt?.toDate ? x.createdAt.toDate().toLocaleString() : '-'}</td>
+          <td class="p-2 text-sm">CREDIT</td>
+          <td class="p-2 text-sm">${x.email||''}</td>
+          <td class="p-2 text-sm">${x.wallet||''}</td>
+          <td class="p-2 text-sm">$${Number(x.amountUsd||0).toFixed(2)}</td>
+          <td class="p-2 text-sm">${x.note||''}</td>`;
+        out.appendChild(tr);
+      });
+    }catch(e){ out.innerHTML='<tr><td colspan="6" class="p-3 muted">Error</td></tr>'; }
+  }
+  async function loadCreditsTable(){
+    const out=$('#txTable'); out.innerHTML='<tr><td colspan="7" class="p-3 muted">Loading…</td></tr>';
+    try{
+      const qy=query(collection(db,'credits'), orderBy('createdAt','desc'), limit(200));
+      const snap=await getDocs(qy); out.innerHTML=''; let i=0, total=0;
+      snap.forEach(d=>{ i++; const x=d.data(); total+=Number(x.amountUsd||0);
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td class="p-2">${i}</td>
+          <td class="p-2 text-sm">${x.createdAt?.toDate? x.createdAt.toDate().toLocaleString():'-'}</td>
+          <td class="p-2 text-sm">${x.email||''}</td>
+          <td class="p-2 text-sm">${x.wallet||''}</td>
+          <td class="p-2 text-sm">$${Number(x.amountUsd||0).toFixed(2)}</td>
+          <td class="p-2 text-sm">${x.isDemo?'yes':'no'}</td>
+          <td class="p-2 text-sm">${x.note||''}</td>`;
+        out.appendChild(tr);
+      });
+      $('#kCredits').textContent='$'+total.toFixed(2);
+    }catch(e){ out.innerHTML='<tr><td colspan="7" class="p-3 muted">Error</td></tr>'; }
+  }
+
+  /* ---------------- Purchases (Grid + Modal) ---------------- */
+  const DUMMY_PURCHASES = [
+    { title:'Ethereal Dreams', currency:'BTC', amount:5.2,  date:'2025-08-05', image:'https://picsum.photos/seed/edreams/640/420' },
+    { title:'Neon Samurai',   currency:'SOL', amount:130,  date:'2025-08-02', image:'https://picsum.photos/seed/neonsam/640/420' },
+    { title:'Fragments of Infinity', currency:'USD', amount:320000, date:'2025-07-10', image:'https://picsum.photos/seed/frag/640/420' },
+    { title:'Silent Horizon', currency:'BTC', amount:3.8,  date:'2025-06-14', image:'https://picsum.photos/seed/silh/640/420' },
+    { title:'Celestial Mirage', currency:'USD', amount:150000, date:'2025-05-22', image:'https://picsum.photos/seed/celmir/640/420' },
+    { title:'Aurora Flux', currency:'SOL', amount:95, date:'2025-04-18', image:'https://picsum.photos/seed/aflux/640/420' }
+  ];
+  function sumTotals(list){
+    let btc=0, sol=0, usd=0;
+    list.forEach(p=>{ if(p.currency==='BTC') btc+=Number(p.amount||0);
+                      else if(p.currency==='SOL') sol+=Number(p.amount||0);
+                      else usd+=Number(p.amount||0); });
+    return { btc, sol, usd };
+  }
+  function openPurchaseModal(p){
+    const wrap=document.createElement('div'); wrap.className='mbackdrop';
+    wrap.innerHTML=`
+      <div class="card modal">
+        <div class="flex gap-4">
+          <img src="${p.image}" alt="" class="rounded-lg" style="width:280px;height:220px;object-fit:cover">
+          <div class="flex-1">
+            <h3 class="font-extrabold text-lg">${p.title}</h3>
+            <p class="muted text-sm mt-1">Purchased ${new Date(p.date).toLocaleDateString()}</p>
+            <div class="mt-3"><span class="tag">${p.currency}</span></div>
+            <div class="mt-4 text-xl font-extrabold">
+              ${p.currency==='USD' ? ('$'+Number(p.amount).toLocaleString()) : (p.amount+' '+p.currency)}
+            </div>
+            <div class="mt-6 flex justify-end gap-2">
+              <button class="btn-ghost" id="mClose">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    wrap.querySelector('#mClose').onclick=()=> wrap.remove();
+    wrap.onclick=e=>{ if(e.target===wrap) wrap.remove(); };
+  }
+  async function loadPurchases(fromFirestore=false){
+    const grid=$('#purchasesGrid'); grid.innerHTML='';
+    let items=[];
+    if(fromFirestore){
+      try{
+        const qy=query(collection(db,'purchases'), orderBy('createdAt','desc'), limit(30));
+        const snap=await getDocs(qy);
+        snap.forEach(s=>{ const d=s.data();
+          items.push({
+            title:d.title||'Untitled',
+            currency:d.currency||'USD',
+            amount:Number(d.amount||0),
+            date:d.createdAt?.toDate ? d.createdAt.toDate().toISOString().slice(0,10) : (d.date||new Date().toISOString()),
+            image:d.image||`https://picsum.photos/seed/${s.id.slice(0,5)}/640/420`
+          });
+        });
+      }catch(e){ console.warn('Purchases load error',e); }
+    }
+    if(items.length===0) items = DUMMY_PURCHASES;
+
+    items.forEach(p=>{
+      const card=document.createElement('button'); card.className='nft-card text-left';
+      card.innerHTML=`
+        <img class="nft-img" src="${p.image}" alt="">
+        <div class="p-3">
+          <div class="font-bold mb-1">${p.title}</div>
+          <div class="flex items-center justify-between">
+            <div class="font-semibold">${p.currency==='USD' ? ('$'+Number(p.amount).toLocaleString()) : (p.amount+' '+p.currency)}</div>
+            <div class="muted text-xs">${new Date(p.date).toLocaleDateString()}</div>
+          </div>
+        </div>`;
+      card.onclick=()=> openPurchaseModal(p);
+      grid.appendChild(card);
+    });
+
+    const totals=sumTotals(items);
+    $('#tBTC').textContent = (totals.btc||0)+' BTC';
+    $('#tSOL').textContent = (totals.sol||0)+' SOL';
+    $('#tUSD').textContent = '$'+Number(totals.usd||0).toLocaleString();
+    $('#kPurchases').textContent = String(items.length);
+  }
+
+  /* ---------------- Overview KPIs ---------------- */
+  async function renderOverview(){
+    try{
+      const uSnap=await getDocs(collection(db,'users'));
+      $('#kUsers').textContent=String(uSnap.size||0);
+      const crSnap=await getDocs(query(collection(db,'credits'), orderBy('createdAt','desc'), limit(1000)));
+      let total=0; crSnap.forEach(d=> total+=Number(d.data().amountUsd||0));
+      $('#kCredits').textContent='$'+total.toFixed(2);
+    }catch(e){ console.warn(e); }
+  }
+</script>
+</body>
+</html>

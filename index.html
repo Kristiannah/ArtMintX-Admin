@@ -8,7 +8,9 @@
 <!-- Tailwind for styling -->
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
+<style /* Optional small tweaks */
+.sidebar .nav a { display:block; }
+main { min-height: calc(100vh - 120px); }>
   :root { --ink:#e6eef3; --muted:#93a1ad; --card:#0b141a; --line:#16232b; --bg:#071018; --pri:#00c7d4; }
   *{ box-sizing:border-box }
   body{ font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--ink); }
@@ -482,4 +484,30 @@
   }
 </script>
 </body>
+    ...
+  <!-- Your existing scripts and content -->
+
+  <!-- ✅ Paste the modal shell here -->
+  <div id="nftModal" class="mbackdrop hidden">
+    <div class="card modal">
+      <div class="flex justify-end">
+        <button id="nftModalClose" class="btn-ghost">Close</button>
+      </div>
+      <div id="nftModalBody" class="mt-2"></div>
+    </div>
+  </div>
+  <script>
+    // Reuse in your JS: show/hide helpers
+    const showModal = (html) => {
+      const m = document.getElementById('nftModal');
+      document.getElementById('nftModalBody').innerHTML = html;
+      m.classList.remove('hidden');
+      document.getElementById('nftModalClose').onclick = ()=> m.classList.add('hidden');
+      m.onclick = (e)=>{ if(e.target===m) m.classList.add('hidden'); };
+    };
+  </script>
+  <!-- ✅ End of pasted code -->
+
+</body>
+</html>l
 </html>
